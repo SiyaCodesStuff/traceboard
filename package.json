@@ -9,6 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:rls": "node scripts/test-rls.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
