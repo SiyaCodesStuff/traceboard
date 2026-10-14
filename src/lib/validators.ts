@@ -77,6 +77,9 @@ export const testCaseSchema = z.object({
   expected_result: testTextSchema,
   status: testCaseStatusSchema,
 });
+export const testCaseFormSchema = testCaseSchema.omit({ code: true });
+export const testCaseEditFormSchema = testCaseFormSchema.extend({ id: uuidSchema });
+export const testCaseDeleteSchema = z.object({ id: uuidSchema, project_id: uuidSchema });
 
 export const linkCreateSchema = z.object({
   project_id: uuidSchema,
@@ -111,6 +114,15 @@ export type UserStoryActionState = {
   values?: { title: string; as_a: string; i_want: string; so_that: string };
 };
 export type TestCaseInput = z.infer<typeof testCaseSchema>;
+export type TestCaseFormInput = z.infer<typeof testCaseFormSchema>;
+export type TestCaseActionState = {
+  status?: "error" | "success";
+  message?: string;
+  code?: string;
+  id?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  values?: { title: string; steps: string; expected_result: string; status: string };
+};
 export type LinkCreateInput = z.infer<typeof linkCreateSchema>;
 export type LinkDeleteInput = z.infer<typeof linkDeleteSchema>;
 
