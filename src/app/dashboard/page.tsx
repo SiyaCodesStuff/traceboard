@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { ClipboardCheck, FileText, FolderOpen, Network, ScrollText } from "lucide-react";
 import { requireUser } from "../../lib/auth";
@@ -44,7 +45,7 @@ async function Dashboard() {
             <Card key={project.id} className="min-w-0 rounded-lg">
               <CardHeader>
                 <div className="flex min-w-0 items-start justify-between gap-2">
-                  <h2 className="min-w-0 break-words pt-1 text-base font-semibold">{project.name}</h2>
+                  <h2 className="min-w-0 break-words pt-1 text-base font-semibold"><Link href={`/projects/${project.id}`} className="hover:underline">{project.name}</Link></h2>
                   <DeleteProjectDialog projectId={project.id} name={project.name} />
                 </div>
                 <p className="min-h-10 break-words text-sm text-muted-foreground">{project.description || "No description"}</p>

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ requireUser: vi.fn(), create: vi.fn(), deleteMany: vi.fn(), revalidatePath: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireUser: vi.fn(), create: vi.fn(), deleteMany: vi.fn(), revalidatePath: vi.fn(), getOwnedProject: vi.fn() }));
+vi.mock("../../lib/project-access", () => ({ getOwnedProject: mocks.getOwnedProject }));
 vi.mock("../../lib/auth", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../../lib/db", () => ({ db: { project: { create: mocks.create, deleteMany: mocks.deleteMany } } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -18,6 +19,7 @@ beforeEach(() => {
   mocks.requireUser.mockResolvedValue({ id: userId });
   mocks.create.mockResolvedValue({ id: projectId });
   mocks.deleteMany.mockResolvedValue({ count: 1 });
+  mocks.getOwnedProject.mockResolvedValue({ id: projectId });
 });
 
 describe("project actions", () => {
@@ -56,7 +58,18 @@ describe("project actions", () => {
   it("scopes deletion by both project ID and owner ID", async () => {
     expect((await deleteProject({}, form({ project_id: projectId, owner_id: "someone-else" }))).status).toBe("success");
     expect(mocks.deleteMany).toHaveBeenCalledWith({ where: { id: projectId, owner_id: userId } });
+    expect(mocks.getOwnedProject).toHaveBeenCalledWith(projectId, userId);
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+  it("refuses deletion before mutation when ownership lookup fails", async () => {
+    mocks.getOwnedProject.mockResolvedValue(null);
+    expect((await deleteProject({}, form({ project_id: projectId }))).status).toBe("error");
+    expect(mocks.deleteMany).not.toHaveBeenCalled();
+  });
+  it("handles ownership lookup database failures", async () => {
+    mocks.getOwnedProject.mockRejectedValue(new Error("database unavailable"));
+    expect((await deleteProject({}, form({ project_id: projectId }))).status).toBe("error");
+    expect(mocks.deleteMany).not.toHaveBeenCalled();
   });
   it("refuses deletion when no owned project matched", async () => {
     mocks.deleteMany.mockResolvedValue({ count: 0 });

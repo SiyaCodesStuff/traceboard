@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "../../lib/auth";
 import { db } from "../../lib/db";
+import { getOwnedProject } from "../../lib/project-access";
 import { projectSchema, projectIdSchema, type ProjectActionState } from "../../lib/validators";
 
 export async function createProject(_previousState: ProjectActionState, formData: FormData): Promise<ProjectActionState> {
@@ -32,6 +33,8 @@ export async function deleteProject(_previousState: ProjectActionState, formData
   const parsed = projectIdSchema.safeParse(formData.get("project_id"));
   if (!parsed.success) return { status: "error", message: "Invalid project ID." };
   try {
+    const project = await getOwnedProject(parsed.data, user.id);
+    if (!project) return { status: "error", message: "Project not found or you do not have access." };
     const result = await db.project.deleteMany({ where: { id: parsed.data, owner_id: user.id } });
     if (result.count === 0) return { status: "error", message: "Project not found or you do not have access." };
   } catch {
