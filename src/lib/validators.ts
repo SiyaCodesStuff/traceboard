@@ -65,6 +65,9 @@ export const userStorySchema = z.object({
   i_want: storyTextSchema,
   so_that: storyTextSchema,
 });
+export const userStoryFormSchema = userStorySchema.omit({ code: true });
+export const userStoryEditFormSchema = userStoryFormSchema.extend({ id: uuidSchema });
+export const userStoryDeleteSchema = z.object({ id: uuidSchema, project_id: uuidSchema });
 
 export const testCaseSchema = z.object({
   project_id: uuidSchema,
@@ -98,6 +101,15 @@ export type RequirementActionState = {
   values?: { title: string; description: string; priority: string; status: string };
 };
 export type UserStoryInput = z.infer<typeof userStorySchema>;
+export type UserStoryFormInput = z.infer<typeof userStoryFormSchema>;
+export type UserStoryActionState = {
+  status?: "error" | "success";
+  message?: string;
+  code?: string;
+  id?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  values?: { title: string; as_a: string; i_want: string; so_that: string };
+};
 export type TestCaseInput = z.infer<typeof testCaseSchema>;
 export type LinkCreateInput = z.infer<typeof linkCreateSchema>;
 export type LinkDeleteInput = z.infer<typeof linkDeleteSchema>;
