@@ -51,6 +51,9 @@ const requirementFields = z.object({
   status: requirementStatusSchema,
 });
 export const requirementCreateSchema = requirementFields.extend({ project_id: uuidSchema });
+export const requirementFormSchema = requirementCreateSchema.omit({ code: true });
+export const requirementEditFormSchema = requirementFormSchema.extend({ id: uuidSchema });
+export const requirementDeleteSchema = z.object({ id: uuidSchema, project_id: uuidSchema });
 export const requirementUpdateSchema = requirementFields.partial().extend({ id: uuidSchema, project_id: uuidSchema })
   .refine(hasChanges, "Provide at least one field to update.");
 
@@ -85,6 +88,15 @@ export type ProjectCreateInput = z.infer<typeof projectCreateSchema>;
 export type ProjectUpdateInput = z.infer<typeof projectUpdateSchema>;
 export type RequirementCreateInput = z.infer<typeof requirementCreateSchema>;
 export type RequirementUpdateInput = z.infer<typeof requirementUpdateSchema>;
+export type RequirementFormInput = z.infer<typeof requirementFormSchema>;
+export type RequirementActionState = {
+  status?: "error" | "success";
+  message?: string;
+  code?: string;
+  id?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  values?: { title: string; description: string; priority: string; status: string };
+};
 export type UserStoryInput = z.infer<typeof userStorySchema>;
 export type TestCaseInput = z.infer<typeof testCaseSchema>;
 export type LinkCreateInput = z.infer<typeof linkCreateSchema>;
