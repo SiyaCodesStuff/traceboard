@@ -55,9 +55,9 @@ function connect(map: Map<string, Set<string>>, from: string, to: string) {
  * Missing endpoints and same-type edges are ignored. Output preserves input order
  * and item metadata; input arrays and objects are never mutated. No DB access.
  */
-export function calculateCoverage<R extends CoverageItem, S extends CoverageItem, T extends CoverageItem>(
+function analyzeCoverage<R extends CoverageItem, S extends CoverageItem, T extends CoverageItem>(
   input: CoverageInput<R, S, T>,
-): CoverageResult<R, S, T> {
+) {
   const { requirements, userStories, testCases, links } = input;
   const ids: Record<CoverageEntityType, Set<string>> = {
     REQUIREMENT: new Set(requirements.map((item) => item.id)),
@@ -90,21 +90,79 @@ export function calculateCoverage<R extends CoverageItem, S extends CoverageItem
 
   const coveredRequirements = new Set<string>();
   const coveredTests = new Set<string>();
+  const testsByRequirement = new Map<string, Set<string>>();
+  const indirectTestsByRequirement = new Map<string, Set<string>>();
   for (const requirement of requirements) {
     const tests = new Set(requirementTests.get(requirement.id));
+    const indirect = new Set<string>();
     for (const storyId of requirementStories.get(requirement.id) ?? []) {
-      for (const testId of storyTests.get(storyId) ?? []) tests.add(testId);
+      for (const testId of storyTests.get(storyId) ?? []) { tests.add(testId); indirect.add(testId); }
     }
+    testsByRequirement.set(requirement.id, tests);
+    indirectTestsByRequirement.set(requirement.id, indirect);
     if (tests.size > 0) coveredRequirements.add(requirement.id);
     for (const testId of tests) coveredTests.add(testId);
   }
 
-  return {
+  const coverage: CoverageResult<R, S, T> = {
     requirementsWithoutTests: requirements.filter((item) => !coveredRequirements.has(item.id)),
     orphanTestCases: testCases.filter((item) => !coveredTests.has(item.id)),
     userStoriesWithoutRequirements: userStories.filter((item) => !assignedStories.has(item.id)),
     coveredRequirementCount: coveredRequirements.size,
     totalRequirementCount: requirements.length,
     coveragePercentage: calculateCoveragePercentage(coveredRequirements.size, requirements.length),
+  };
+  return { coverage, testsByRequirement, indirectTestsByRequirement };
+}
+
+/** Applies the direct-or-two-hop rule documented in analyzeCoverage. */
+export function calculateCoverage<R extends CoverageItem, S extends CoverageItem, T extends CoverageItem>(
+  input: CoverageInput<R, S, T>,
+): CoverageResult<R, S, T> {
+  return analyzeCoverage(input).coverage;
+}
+
+export type MatrixLink = CoverageLink & { id: string };
+export type TraceMatrixCell = { testCaseId: string; covered: boolean; viaStory: boolean; directLinkIds: string[] };
+export type TraceMatrixRow<R extends CoverageItem> = { requirement: R; coveredTestCount: number; isCovered: boolean; cells: TraceMatrixCell[] };
+export type TraceMatrixModel<R extends CoverageItem, S extends CoverageItem, T extends CoverageItem> = {
+  coverage: CoverageResult<R, S, T>;
+  testCases: T[];
+  rows: TraceMatrixRow<R>[];
+};
+
+/** Direct link IDs support editing, while story-only coverage remains read-only. */
+export function calculateTraceMatrix<R extends CoverageItem, S extends CoverageItem, T extends CoverageItem>(
+  input: Omit<CoverageInput<R, S, T>, "links"> & { links: readonly MatrixLink[] },
+): TraceMatrixModel<R, S, T> {
+  const { coverage, testsByRequirement, indirectTestsByRequirement } = analyzeCoverage(input);
+  const directIds = new Map<string, Map<string, Set<string>>>();
+  for (const link of input.links) {
+    let requirementId: string;
+    let testId: string;
+    if (link.source_type === "REQUIREMENT" && link.target_type === "TEST_CASE") {
+      requirementId = link.source_id; testId = link.target_id;
+    } else if (link.source_type === "TEST_CASE" && link.target_type === "REQUIREMENT") {
+      requirementId = link.target_id; testId = link.source_id;
+    } else continue;
+    const tests = directIds.get(requirementId) ?? new Map<string, Set<string>>();
+    const ids = tests.get(testId) ?? new Set<string>();
+    ids.add(link.id); tests.set(testId, ids); directIds.set(requirementId, tests);
+  }
+  return {
+    coverage,
+    testCases: [...input.testCases],
+    rows: input.requirements.map((requirement) => {
+      const tests = testsByRequirement.get(requirement.id)!;
+      return {
+        requirement, coveredTestCount: tests.size, isCovered: tests.size > 0,
+        cells: input.testCases.map((test) => ({
+          testCaseId: test.id,
+          covered: tests.has(test.id),
+          viaStory: indirectTestsByRequirement.get(requirement.id)!.has(test.id),
+          directLinkIds: [...(directIds.get(requirement.id)?.get(test.id) ?? [])],
+        })),
+      };
+    }),
   };
 }
