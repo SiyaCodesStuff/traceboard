@@ -8,6 +8,10 @@ import { getOwnedProject } from "../../../../lib/project-access";
 import { getLinkedTestCounts } from "../../../../lib/requirement-links";
 import { EntityType, Priority, RequirementStatus } from "../../../../lib/validators";
 import { RequirementDialog, DeleteRequirementDialog } from "../../../../components/RequirementDialogs";
+import { ListFilters } from "../../../../components/ListFilters";
+import { parseListFilters, titleCodeSearch, type ListSearchParams } from "../../../../lib/list-filters";
+
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<ListSearchParams> };
 
 const priorityColors: Record<Priority, string> = {
   LOW: "bg-zinc-100 text-zinc-700", MEDIUM: "bg-sky-50 text-sky-800",
@@ -17,15 +21,17 @@ const statusColors: Record<RequirementStatus, string> = {
   DRAFT: "bg-zinc-100 text-zinc-700", APPROVED: "bg-emerald-50 text-emerald-800", TESTED: "bg-cyan-50 text-cyan-800",
 };
 
-async function Requirements({ params }: { params: Promise<{ id: string }> }) {
+async function Requirements({ params, searchParams }: Props) {
   await connection();
   const user = await requireUser();
   const { id } = await params;
   const project = await getOwnedProject(id, user.id);
   if (!project) notFound();
+  const filters = parseListFilters(await searchParams);
+  const filtered = Boolean(filters.q || filters.priority || filters.requirementStatus);
   const where = { project_id: project.id, project: { owner_id: user.id } };
   const [requirements, links, tests] = await Promise.all([
-    db.requirement.findMany({ where, orderBy: [{ created_at: "asc" }, { id: "asc" }], select: { id: true, code: true, title: true, description: true, priority: true, status: true } }),
+    db.requirement.findMany({ where: { ...where, ...titleCodeSearch(filters.q), priority: filters.priority, status: filters.requirementStatus }, orderBy: [{ created_at: "asc" }, { id: "asc" }], select: { id: true, code: true, title: true, description: true, priority: true, status: true } }),
     db.link.findMany({ where: { ...where, OR: [
       { source_type: EntityType.REQUIREMENT, target_type: EntityType.TEST_CASE },
       { source_type: EntityType.TEST_CASE, target_type: EntityType.REQUIREMENT },
@@ -39,12 +45,13 @@ async function Requirements({ params }: { params: Promise<{ id: string }> }) {
         <div><h2 id="requirements-heading" className="text-lg font-semibold">Requirements</h2><p className="mt-1 text-sm text-muted-foreground">{requirements.length} {requirements.length === 1 ? "requirement" : "requirements"}</p></div>
         <RequirementDialog projectId={project.id} />
       </div>
+      <ListFilters kind="requirements" query={filters.q} priority={filters.priority} status={filters.requirementStatus} />
       <Table className="min-w-[680px]">
         <TableHeader><TableRow>
           <TableHead>Code</TableHead><TableHead>Title</TableHead><TableHead>Priority</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Linked tests</TableHead><TableHead><span className="sr-only">Actions</span></TableHead>
         </TableRow></TableHeader>
         <TableBody>
-          {requirements.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No requirements yet.</TableCell></TableRow> : requirements.map((requirement) => (
+          {requirements.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">{filtered ? "No requirements match these filters." : "No requirements yet."}</TableCell></TableRow> : requirements.map((requirement) => (
             <TableRow key={requirement.id}>
               <TableCell className="font-mono text-xs">{requirement.code}</TableCell>
               <TableCell className="min-w-48 max-w-sm whitespace-normal"><span className="block break-words font-medium">{requirement.title}</span></TableCell>
@@ -60,6 +67,6 @@ async function Requirements({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function RequirementsPage({ params }: { params: Promise<{ id: string }> }) {
-  return <Suspense fallback={<p className="text-sm text-muted-foreground">Loading requirements...</p>}><Requirements params={params} /></Suspense>;
+export default function RequirementsPage(props: Props) {
+  return <Suspense fallback={<p className="text-sm text-muted-foreground">Loading requirements...</p>}><Requirements {...props} /></Suspense>;
 }

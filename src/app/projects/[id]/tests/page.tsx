@@ -7,6 +7,10 @@ import { db } from "../../../../lib/db";
 import { getOwnedProject } from "../../../../lib/project-access";
 import { TestCaseStatus } from "../../../../lib/validators";
 import { TestCaseDialog, DeleteTestCaseDialog } from "../../../../components/TestCaseDialogs";
+import { ListFilters } from "../../../../components/ListFilters";
+import { parseListFilters, titleCodeSearch, type ListSearchParams } from "../../../../lib/list-filters";
+
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<ListSearchParams> };
 
 const statusStyles: Record<TestCaseStatus, { label: string; color: string }> = {
   NOT_RUN: { label: "Not run", color: "bg-zinc-100 text-zinc-700" },
@@ -14,14 +18,16 @@ const statusStyles: Record<TestCaseStatus, { label: string; color: string }> = {
   FAILED: { label: "Failed", color: "bg-rose-50 text-rose-800" },
 };
 
-async function Tests({ params }: { params: Promise<{ id: string }> }) {
+async function Tests({ params, searchParams }: Props) {
   await connection();
   const user = await requireUser();
   const { id } = await params;
   const project = await getOwnedProject(id, user.id);
   if (!project) notFound();
+  const filters = parseListFilters(await searchParams);
+  const filtered = Boolean(filters.q || filters.testStatus);
   const tests = await db.testCase.findMany({
-    where: { project_id: project.id, project: { owner_id: user.id } },
+    where: { project_id: project.id, project: { owner_id: user.id }, ...titleCodeSearch(filters.q), status: filters.testStatus },
     orderBy: [{ created_at: "asc" }, { id: "asc" }],
     select: { id: true, code: true, title: true, steps: true, expected_result: true, status: true },
   });
@@ -31,10 +37,11 @@ async function Tests({ params }: { params: Promise<{ id: string }> }) {
         <div><h2 id="tests-heading" className="text-lg font-semibold">Tests</h2><p className="mt-1 text-sm text-muted-foreground">{tests.length} {tests.length === 1 ? "test case" : "test cases"}</p></div>
         <TestCaseDialog projectId={project.id} />
       </div>
+      <ListFilters kind="tests" query={filters.q} status={filters.testStatus} />
       <Table className="min-w-[900px] table-fixed">
         <TableHeader><TableRow><TableHead className="w-24">Code</TableHead><TableHead className="w-44">Title</TableHead><TableHead>Steps</TableHead><TableHead>Expected result</TableHead><TableHead className="w-24">Status</TableHead><TableHead className="w-24"><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
         <TableBody>
-          {tests.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">No test cases yet.</TableCell></TableRow> : tests.map((testCase) => (
+          {tests.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">{filtered ? "No test cases match these filters." : "No test cases yet."}</TableCell></TableRow> : tests.map((testCase) => (
             <TableRow key={testCase.id}>
               <TableCell className="font-mono text-xs">{testCase.code}</TableCell>
               <TableCell className="whitespace-normal"><span className="block break-words font-medium">{testCase.title}</span></TableCell>
@@ -50,6 +57,6 @@ async function Tests({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-export default function TestsPage({ params }: { params: Promise<{ id: string }> }) {
-  return <Suspense fallback={<p className="text-sm text-muted-foreground">Loading test cases...</p>}><Tests params={params} /></Suspense>;
+export default function TestsPage(props: Props) {
+  return <Suspense fallback={<p className="text-sm text-muted-foreground">Loading test cases...</p>}><Tests {...props} /></Suspense>;
 }
