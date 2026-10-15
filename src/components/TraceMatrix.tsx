@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, LoaderCircle, Plus, TriangleAlert } from "lucide-react";
+import { Check, Download, LoaderCircle, Plus, TriangleAlert } from "lucide-react";
+import { buttonVariants } from "../../components/ui/button";
 import { toast } from "sonner";
 import { createLink, deleteLink } from "../app/projects/[id]/links/actions";
 import type { CoverageItem, TraceMatrixCell, TraceMatrixModel } from "../lib/coverage";
@@ -43,7 +44,10 @@ export function TraceMatrix({ projectId, matrix }: Props) {
 
   return (
     <section aria-labelledby="matrix-heading">
-      <h2 id="matrix-heading" className="text-lg font-semibold">Traceability matrix</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="matrix-heading" className="text-lg font-semibold">Traceability matrix</h2>
+        <a href={`/api/export?projectId=${encodeURIComponent(projectId)}`} className={buttonVariants({ variant: "outline" })}><Download aria-hidden="true" />Export</a>
+      </div>
       <dl className="my-6 grid grid-cols-2 gap-5 border-y py-5 sm:grid-cols-4">
         {[
           ["Coverage", `${new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(coverage.coveragePercentage)}%`],
