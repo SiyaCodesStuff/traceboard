@@ -87,8 +87,10 @@ export const linkCreateSchema = z.object({
   source_id: uuidSchema,
   target_type: entityTypeSchema,
   target_id: uuidSchema,
-});
+}).refine((link) => link.source_id !== link.target_id, "Self-links are not allowed.")
+  .refine((link) => link.source_type !== link.target_type, "Link two different item types.");
 export const linkDeleteSchema = z.object({ id: uuidSchema, project_id: uuidSchema });
+export const linkPickerSchema = z.object({ project_id: uuidSchema, source_type: entityTypeSchema, source_id: uuidSchema });
 
 export type ProjectCreateInput = z.infer<typeof projectCreateSchema>;
 export type ProjectUpdateInput = z.infer<typeof projectUpdateSchema>;

@@ -9,6 +9,7 @@ import { getLinkedTestCounts } from "../../../../lib/requirement-links";
 import { EntityType, Priority, RequirementStatus } from "../../../../lib/validators";
 import { RequirementDialog, DeleteRequirementDialog } from "../../../../components/RequirementDialogs";
 import { ListFilters } from "../../../../components/ListFilters";
+import { LinkPicker } from "../../../../components/LinkPicker";
 import { parseListFilters, titleCodeSearch, type ListSearchParams } from "../../../../lib/list-filters";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<ListSearchParams> };
@@ -58,7 +59,7 @@ async function Requirements({ params, searchParams }: Props) {
               <TableCell><span className={`inline-block rounded px-2 py-1 text-xs font-medium ${priorityColors[requirement.priority]}`}>{requirement.priority.charAt(0) + requirement.priority.slice(1).toLowerCase()}</span></TableCell>
               <TableCell><span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusColors[requirement.status]}`}>{requirement.status.charAt(0) + requirement.status.slice(1).toLowerCase()}</span></TableCell>
               <TableCell className="text-right tabular-nums">{linkedTests.get(requirement.id) ?? 0}</TableCell>
-              <TableCell><div className="flex justify-end gap-1"><RequirementDialog projectId={project.id} requirement={requirement} /><DeleteRequirementDialog projectId={project.id} requirement={requirement} /></div></TableCell>
+              <TableCell><div className="flex justify-end gap-1"><LinkPicker projectId={project.id} sourceType={EntityType.REQUIREMENT} sourceId={requirement.id} sourceCode={requirement.code} /><RequirementDialog projectId={project.id} requirement={requirement} /><DeleteRequirementDialog projectId={project.id} requirement={requirement} /></div></TableCell>
             </TableRow>
           ))}
         </TableBody>

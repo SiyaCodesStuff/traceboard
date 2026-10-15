@@ -10,6 +10,7 @@ vi.mock("../components/RequirementDialogs", () => ({ RequirementDialog: () => nu
 vi.mock("../components/UserStoryDialogs", () => ({ UserStoryDialog: () => null, DeleteUserStoryDialog: () => null }));
 vi.mock("../components/TestCaseDialogs", () => ({ TestCaseDialog: () => null, DeleteTestCaseDialog: () => null }));
 vi.mock("../components/ListFilters", () => ({ ListFilters: () => null }));
+vi.mock("../components/LinkPicker", () => ({ LinkPicker: () => null }));
 import RequirementsPage from "../app/projects/[id]/requirements/page";
 import StoriesPage from "../app/projects/[id]/stories/page";
 import TestsPage from "../app/projects/[id]/tests/page";

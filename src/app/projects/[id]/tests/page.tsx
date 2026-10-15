@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { requireUser } from "../../../../lib/auth";
 import { db } from "../../../../lib/db";
 import { getOwnedProject } from "../../../../lib/project-access";
-import { TestCaseStatus } from "../../../../lib/validators";
+import { EntityType, TestCaseStatus } from "../../../../lib/validators";
 import { TestCaseDialog, DeleteTestCaseDialog } from "../../../../components/TestCaseDialogs";
 import { ListFilters } from "../../../../components/ListFilters";
+import { LinkPicker } from "../../../../components/LinkPicker";
 import { parseListFilters, titleCodeSearch, type ListSearchParams } from "../../../../lib/list-filters";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<ListSearchParams> };
@@ -39,7 +40,7 @@ async function Tests({ params, searchParams }: Props) {
       </div>
       <ListFilters kind="tests" query={filters.q} status={filters.testStatus} />
       <Table className="min-w-[900px] table-fixed">
-        <TableHeader><TableRow><TableHead className="w-24">Code</TableHead><TableHead className="w-44">Title</TableHead><TableHead>Steps</TableHead><TableHead>Expected result</TableHead><TableHead className="w-24">Status</TableHead><TableHead className="w-24"><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead className="w-24">Code</TableHead><TableHead className="w-44">Title</TableHead><TableHead>Steps</TableHead><TableHead>Expected result</TableHead><TableHead className="w-24">Status</TableHead><TableHead className="w-44"><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
         <TableBody>
           {tests.length === 0 ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">{filtered ? "No test cases match these filters." : "No test cases yet."}</TableCell></TableRow> : tests.map((testCase) => (
             <TableRow key={testCase.id}>
@@ -48,7 +49,7 @@ async function Tests({ params, searchParams }: Props) {
               <TableCell><div className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words leading-6">{testCase.steps}</div></TableCell>
               <TableCell><div className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words leading-6">{testCase.expected_result}</div></TableCell>
               <TableCell><span className={`inline-block rounded px-2 py-1 text-xs font-medium ${statusStyles[testCase.status].color}`}>{statusStyles[testCase.status].label}</span></TableCell>
-              <TableCell><div className="flex justify-end gap-1"><TestCaseDialog projectId={project.id} testCase={testCase} /><DeleteTestCaseDialog projectId={project.id} testCase={testCase} /></div></TableCell>
+              <TableCell><div className="flex justify-end gap-1"><LinkPicker projectId={project.id} sourceType={EntityType.TEST_CASE} sourceId={testCase.id} sourceCode={testCase.code} /><TestCaseDialog projectId={project.id} testCase={testCase} /><DeleteTestCaseDialog projectId={project.id} testCase={testCase} /></div></TableCell>
             </TableRow>
           ))}
         </TableBody>

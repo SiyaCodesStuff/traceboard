@@ -7,6 +7,8 @@ import { db } from "../../../../lib/db";
 import { getOwnedProject } from "../../../../lib/project-access";
 import { UserStoryDialog, DeleteUserStoryDialog } from "../../../../components/UserStoryDialogs";
 import { ListFilters } from "../../../../components/ListFilters";
+import { LinkPicker } from "../../../../components/LinkPicker";
+import { EntityType } from "../../../../lib/validators";
 import { parseListFilters, titleCodeSearch, type ListSearchParams } from "../../../../lib/list-filters";
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<ListSearchParams> };
@@ -38,7 +40,7 @@ async function Stories({ params, searchParams }: Props) {
               <TableCell className="font-mono text-xs">{story.code}</TableCell>
               <TableCell className="min-w-40 max-w-xs whitespace-normal"><span className="block break-words font-medium">{story.title}</span></TableCell>
               <TableCell className="min-w-64 max-w-lg whitespace-normal"><p className="break-words leading-6">As a {story.as_a}, I want {story.i_want}, so that {story.so_that}.</p></TableCell>
-              <TableCell><div className="flex justify-end gap-1"><UserStoryDialog projectId={project.id} story={story} /><DeleteUserStoryDialog projectId={project.id} story={story} /></div></TableCell>
+              <TableCell><div className="flex justify-end gap-1"><LinkPicker projectId={project.id} sourceType={EntityType.USER_STORY} sourceId={story.id} sourceCode={story.code} /><UserStoryDialog projectId={project.id} story={story} /><DeleteUserStoryDialog projectId={project.id} story={story} /></div></TableCell>
             </TableRow>
           ))}
         </TableBody>
